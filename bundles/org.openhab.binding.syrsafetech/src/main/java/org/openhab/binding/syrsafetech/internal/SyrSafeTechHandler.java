@@ -54,7 +54,7 @@ public class SyrSafeTechHandler extends BaseThingHandler {
     private SyrSafeTechConfiguration config = new SyrSafeTechConfiguration();
 
     private final HttpClient httpClient;
-    //#region main Handler
+    // #region main Handler
 
     public SyrSafeTechHandler(Thing thing, HttpClient httpClient) {
         super(thing);
@@ -142,14 +142,15 @@ public class SyrSafeTechHandler extends BaseThingHandler {
         }
     }
 
-    //#endregion main Handler
-    
-    //#region multiusage functions
+    // #endregion main Handler
+
+    // #region multiusage functions
     // Update the updateData method to accept an ipAddress parameter and call updateShutoffStatus
     private void updateData(String ipAddress) throws InterruptedException, TimeoutException, ExecutionException {
         try {
             updateShutoffStatus(ipAddress);
             updateSelectProfileStatus(ipAddress);
+            updateNumberOfProfilesStatus(ipAddress);
             updateStatus(ThingStatus.ONLINE);
         } catch (IOException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
@@ -170,10 +171,10 @@ public class SyrSafeTechHandler extends BaseThingHandler {
         }
         return response.getContentAsString();
     }
-    
-    //#endregion multiusage functions
 
-    //#region ShutOff (Close&Open)
+    // #endregion multiusage functions
+
+    // #region ShutOff (Close&Open)
     private int getCurrentShutoffState(String ipAddress) throws IOException {
         try {
             String response = sendCommand(ipAddress, "get", "AB", "");
@@ -247,9 +248,9 @@ public class SyrSafeTechHandler extends BaseThingHandler {
         }
     }
 
-    //#endregion ShutOff (Close&Open)
+    // #endregion ShutOff (Close&Open)
 
-    //#region Profile
+    // #region Profile
     private void updateSelectProfileStatus(String ipAddress)
             throws IOException, TimeoutException, InterruptedException, ExecutionException {
         String response = sendCommand(ipAddress, "get", "PRF", "");
@@ -296,5 +297,55 @@ public class SyrSafeTechHandler extends BaseThingHandler {
         return -1;
     }
 
-    //#endregion Profile
+    // #endregion Profile
+
+    // #region Number of Profiles
+
+    /**
+     * Retrieves the number of available profiles and updates the channel accordingly.
+     *
+     * @param ipAddress The IP address of the device
+     * @throws IOException, TimeoutException, InterruptedException, ExecutionException
+     */
+    private void updateNumberOfProfilesStatus(String ipAddress)
+            throws IOException, TimeoutException, InterruptedException, ExecutionException {
+        String response = sendCommand(ipAddress, "get", "PRn", "");
+        updateNumberOfProfilesChannel(response);
+    }
+
+    /**
+     * Updates the numberOfProfiles channel based on the response received from the device.
+     *
+     * @param response The response from the device
+     */
+    private void updateNumberOfProfilesChannel(String response) {
+        int numberOfProfiles = parseNumberOfProfilesResponse(response);
+        if (numberOfProfiles >= 0) {
+            updateState(SyrSafeTechBindingConstants.CHANNEL_NUMBER_OF_PROFILES, new DecimalType(numberOfProfiles));
+        } else {
+            logger.warn("Invalid number of profiles received: {}", response);
+        }
+    }
+
+    /**
+     * Parses the response received from the device and returns the number of available profiles.
+     *
+     * @param response The response from the device
+     * @return The number of available profiles or -1 if the response is invalid
+     */
+    private int parseNumberOfProfilesResponse(String response) {
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            if (jsonObject.has("getPRN")) {
+                return jsonObject.getInt("getPRN");
+            } else {
+                return -1;
+            }
+        } catch (JSONException e) {
+            logger.warn("Unable to parse response as a JSON object: {}", response);
+            return -1;
+        }
+    }
+
+    // #endregion Number of Profiles
 }

@@ -12,6 +12,7 @@
 		<channels>
 			<channel id="shutoff" typeId="shutoff"/>
 			<channel id="selectProfile" typeId="selectProfile"/>
+			<channel id="numberOfProfiles" typeId="numberOfProfiles"/>
 		</channels>
 
 		<config-description>
@@ -40,4 +41,11 @@
 		<description>Select a profile from 1 to 8</description>
 		<state min="1" max="8" step="1" pattern="%d" readOnly="false"/>
 	</channel-type>
+	<channel-type id="numberOfProfiles">
+		<item-type>Number</item-type>
+		<label>Number of Profiles</label>
+		<description>The number of available profiles for the user</description>
+		<state readOnly="true"/>
+	</channel-type>
+
 </thing:thing-descriptions>
