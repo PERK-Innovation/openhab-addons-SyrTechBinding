@@ -54,6 +54,7 @@ public class SyrSafeTechHandler extends BaseThingHandler {
     private SyrSafeTechConfiguration config = new SyrSafeTechConfiguration();
 
     private final HttpClient httpClient;
+    //#region main Handler
 
     public SyrSafeTechHandler(Thing thing, HttpClient httpClient) {
         super(thing);
@@ -131,16 +132,6 @@ public class SyrSafeTechHandler extends BaseThingHandler {
         }
     }
 
-    private int getCurrentShutoffState(String ipAddress) throws IOException {
-        try {
-            String response = sendCommand(ipAddress, "get", "AB", "");
-            return parseShutoffResponse(response);
-        } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            logger.error("Exception: {}", e.getMessage(), e);
-            return -1;
-        }
-    }
-
     @Override
     public void initialize() {
         config = getConfigAs(SyrSafeTechConfiguration.class);
@@ -148,6 +139,48 @@ public class SyrSafeTechHandler extends BaseThingHandler {
             updateStatus(ThingStatus.UNKNOWN);
         } else {
             logger.error("config is not initialized");
+        }
+    }
+
+    //#endregion main Handler
+    
+    //#region multiusage functions
+    // Update the updateData method to accept an ipAddress parameter and call updateShutoffStatus
+    private void updateData(String ipAddress) throws InterruptedException, TimeoutException, ExecutionException {
+        try {
+            updateShutoffStatus(ipAddress);
+            updateSelectProfileStatus(ipAddress);
+            updateStatus(ThingStatus.ONLINE);
+        } catch (IOException e) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
+        } catch (TimeoutException e) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Timeout: " + e.getMessage());
+        }
+    }
+
+    private String sendCommand(String ipAddress, String action, String command, String parameter) throws IOException,
+            InterruptedException, TimeoutException, java.util.concurrent.TimeoutException, ExecutionException {
+        String url = String.format(COMMAND_URL, ipAddress, action, command, parameter);
+        logger.info("Sending request to URL: {}", url);
+        Request request = httpClient.newRequest(url).timeout(5, TimeUnit.SECONDS);
+        ContentResponse response = request.send();
+
+        if (response.getStatus() != HttpStatus.OK_200) {
+            throw new IOException("HTTP response status not OK: " + response.getStatus());
+        }
+        return response.getContentAsString();
+    }
+    
+    //#endregion multiusage functions
+
+    //#region ShutOff (Close&Open)
+    private int getCurrentShutoffState(String ipAddress) throws IOException {
+        try {
+            String response = sendCommand(ipAddress, "get", "AB", "");
+            return parseShutoffResponse(response);
+        } catch (InterruptedException | TimeoutException | ExecutionException e) {
+            logger.error("Exception: {}", e.getMessage(), e);
+            return -1;
         }
     }
 
@@ -214,32 +247,9 @@ public class SyrSafeTechHandler extends BaseThingHandler {
         }
     }
 
-    // Update the updateData method to accept an ipAddress parameter and call updateShutoffStatus
-    private void updateData(String ipAddress) throws InterruptedException, TimeoutException, ExecutionException {
-        try {
-            updateShutoffStatus(ipAddress);
-            updateSelectProfileStatus(ipAddress);
-            updateStatus(ThingStatus.ONLINE);
-        } catch (IOException e) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
-        } catch (TimeoutException e) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, "Timeout: " + e.getMessage());
-        }
-    }
+    //#endregion ShutOff (Close&Open)
 
-    private String sendCommand(String ipAddress, String action, String command, String parameter) throws IOException,
-            InterruptedException, TimeoutException, java.util.concurrent.TimeoutException, ExecutionException {
-        String url = String.format(COMMAND_URL, ipAddress, action, command, parameter);
-        logger.info("Sending request to URL: {}", url);
-        Request request = httpClient.newRequest(url).timeout(5, TimeUnit.SECONDS);
-        ContentResponse response = request.send();
-
-        if (response.getStatus() != HttpStatus.OK_200) {
-            throw new IOException("HTTP response status not OK: " + response.getStatus());
-        }
-        return response.getContentAsString();
-    }
-
+    //#region Profile
     private void updateSelectProfileStatus(String ipAddress)
             throws IOException, TimeoutException, InterruptedException, ExecutionException {
         String response = sendCommand(ipAddress, "get", "PRF", "");
@@ -285,4 +295,6 @@ public class SyrSafeTechHandler extends BaseThingHandler {
         }
         return -1;
     }
+
+    //#endregion Profile
 }
