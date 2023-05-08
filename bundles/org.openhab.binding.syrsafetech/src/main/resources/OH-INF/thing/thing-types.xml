@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="syrsafetech"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+	<thing-type id="syrleakageprotection">
+
+		<label>SyrSafeTech Binding Thing</label>
+		<description>Sample thing for SyrSafeTech Binding</description>
+
+		<channels>
+			<channel id="shutoff" typeId="shutoff"/>
+		</channels>
+
+		<config-description>
+			<parameter name="ipAddress" type="text" required="true">
+				<context>network-IP</context>
+				<label>Ip address</label>
+				<description>Hostname or IP address of the device</description>
+			</parameter>
+			<parameter name="refreshInterval" type="integer" unit="s" min="1">
+				<label>Refresh Interval</label>
+				<description>Interval the device is polled in sec.</description>
+				<default>600</default>
+				<advanced>true</advanced>
+			</parameter>
+		</config-description>
+	</thing-type>
+
+	<channel-type id="shutoff">
+		<item-type>Switch</item-type>
+		<label>Shutoff</label>
+		<description>Shutoff channel</description>
+	</channel-type>
+
+</thing:thing-descriptions>
