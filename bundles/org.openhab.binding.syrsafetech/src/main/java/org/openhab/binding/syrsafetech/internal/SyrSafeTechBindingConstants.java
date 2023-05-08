@@ -32,4 +32,5 @@ public class SyrSafeTechBindingConstants {
 
     // List of all Channel ids
     public static final String CHANNEL_SHUTOFF = "shutoff";
+    public static final String CHANNEL_SELECT_PROFILE = "selectProfile";
 }

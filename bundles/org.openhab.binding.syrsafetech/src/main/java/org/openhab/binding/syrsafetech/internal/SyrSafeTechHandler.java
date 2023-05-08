@@ -49,7 +49,7 @@ public class SyrSafeTechHandler extends BaseThingHandler {
 
     private final Logger logger = LoggerFactory.getLogger(SyrSafeTechHandler.class);
 
-    private static final String COMMAND_URL = "http://%s:5333/safe-tec/%s/%s";
+    private static final String COMMAND_URL = "http://%s:5333/safe-tec/%s/%s/%s";
 
     private SyrSafeTechConfiguration config = new SyrSafeTechConfiguration();
 
@@ -102,12 +102,38 @@ public class SyrSafeTechHandler extends BaseThingHandler {
             } else {
                 logger.warn("Invalid shutoff command: {}", command);
             }
+        } else if (channelUID.getId().equals(SyrSafeTechBindingConstants.CHANNEL_SELECT_PROFILE)) {
+            int newProfile = -1;
+
+            if (command instanceof DecimalType) {
+                newProfile = ((DecimalType) command).intValue();
+            } else if (command instanceof RefreshType) {
+                try {
+                    updateSelectProfileStatus(ipAddress);
+                } catch (IOException | TimeoutException | InterruptedException | ExecutionException e) {
+                    logger.error("Exception in updateSelectProfileStatus: {}", e.getMessage(), e);
+                }
+                return;
+            } else {
+                logger.warn("Invalid command type for selectProfile channel: {}", command.getClass().getSimpleName());
+                return;
+            }
+
+            if (newProfile >= 1 && newProfile <= 8) {
+                try {
+                    setSelectProfileStatus(ipAddress, newProfile);
+                } catch (IOException | TimeoutException | InterruptedException | ExecutionException e) {
+                    logger.error("Exception in setSelectProfileStatus: {}", e.getMessage(), e);
+                }
+            } else {
+                logger.warn("Invalid select profile command: {}", command);
+            }
         }
     }
 
     private int getCurrentShutoffState(String ipAddress) throws IOException {
         try {
-            String response = sendCommand(ipAddress, "get", "AB");
+            String response = sendCommand(ipAddress, "get", "AB", "");
             return parseShutoffResponse(response);
         } catch (InterruptedException | TimeoutException | ExecutionException e) {
             logger.error("Exception: {}", e.getMessage(), e);
@@ -133,7 +159,7 @@ public class SyrSafeTechHandler extends BaseThingHandler {
      */
     private void updateShutoffStatus(String ipAddress)
             throws IOException, TimeoutException, InterruptedException, ExecutionException {
-        String response = sendCommand(ipAddress, "get", "AB");
+        String response = sendCommand(ipAddress, "get", "AB", "");
         updateShutoffChannel(response);
     }
 
@@ -146,7 +172,7 @@ public class SyrSafeTechHandler extends BaseThingHandler {
      */
     private void setShutoffStatus(String ipAddress, int newState)
             throws IOException, TimeoutException, InterruptedException, ExecutionException {
-        String response = sendCommand(ipAddress, "set", "AB" + newState);
+        String response = sendCommand(ipAddress, "set", "AB", String.valueOf(newState));
         updateShutoffChannel(response);
     }
 
@@ -192,6 +218,7 @@ public class SyrSafeTechHandler extends BaseThingHandler {
     private void updateData(String ipAddress) throws InterruptedException, TimeoutException, ExecutionException {
         try {
             updateShutoffStatus(ipAddress);
+            updateSelectProfileStatus(ipAddress);
             updateStatus(ThingStatus.ONLINE);
         } catch (IOException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
@@ -200,9 +227,9 @@ public class SyrSafeTechHandler extends BaseThingHandler {
         }
     }
 
-    private String sendCommand(String ipAddress, String action, String command) throws IOException,
+    private String sendCommand(String ipAddress, String action, String command, String parameter) throws IOException,
             InterruptedException, TimeoutException, java.util.concurrent.TimeoutException, ExecutionException {
-        String url = String.format(COMMAND_URL, ipAddress, action, command);
+        String url = String.format(COMMAND_URL, ipAddress, action, command, parameter);
         logger.info("Sending request to URL: {}", url);
         Request request = httpClient.newRequest(url).timeout(5, TimeUnit.SECONDS);
         ContentResponse response = request.send();
@@ -211,5 +238,51 @@ public class SyrSafeTechHandler extends BaseThingHandler {
             throw new IOException("HTTP response status not OK: " + response.getStatus());
         }
         return response.getContentAsString();
+    }
+
+    private void updateSelectProfileStatus(String ipAddress)
+            throws IOException, TimeoutException, InterruptedException, ExecutionException {
+        String response = sendCommand(ipAddress, "get", "PRF", "");
+        updateSelectProfileChannel(response);
+    }
+
+    private void setSelectProfileStatus(String ipAddress, int newProfile)
+            throws IOException, TimeoutException, InterruptedException, ExecutionException {
+        String response = sendCommand(ipAddress, "set", "PRF", String.valueOf(newProfile));
+        updateSelectProfileChannel(response);
+    }
+
+    private void updateSelectProfileChannel(String response) {
+        int profile = parseSelectProfileResponse(response);
+        if (profile >= 1 && profile <= 8) {
+            updateState(SyrSafeTechBindingConstants.CHANNEL_SELECT_PROFILE, new DecimalType(profile));
+        } else {
+            logger.warn("Invalid select profile status received: {}", response);
+        }
+    }
+
+    private int parseSelectProfileResponse(String response) {
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            if (jsonObject.has("getPRF")) {
+                return jsonObject.getInt("getPRF");
+            } else {
+                for (int i = 1; i <= 8; i++) {
+                    String key = "setPRF" + i;
+                    if (jsonObject.has(key)) {
+                        String result = jsonObject.getString(key);
+                        if ("OK".equals(result)) {
+                            return i;
+                        } else {
+                            return -1;
+                        }
+                    }
+                }
+            }
+        } catch (JSONException e) {
+            logger.warn("Unable to parse response as a JSON object: {}", response);
+            return -1;
+        }
+        return -1;
     }
 }
