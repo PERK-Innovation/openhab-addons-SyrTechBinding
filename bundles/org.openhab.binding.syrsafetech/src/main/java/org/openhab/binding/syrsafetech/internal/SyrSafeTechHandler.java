@@ -15,6 +15,8 @@ package org.openhab.binding.syrsafetech.internal;
 import static org.openhab.binding.syrsafetech.internal.SyrSafeTechBindingConstants.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -54,6 +56,7 @@ public class SyrSafeTechHandler extends BaseThingHandler {
     private SyrSafeTechConfiguration config = new SyrSafeTechConfiguration();
 
     private final HttpClient httpClient;
+
     // #region main Handler
 
     public SyrSafeTechHandler(Thing thing, HttpClient httpClient) {
@@ -129,6 +132,46 @@ public class SyrSafeTechHandler extends BaseThingHandler {
             } else {
                 logger.warn("Invalid select profile command: {}", command);
             }
+        } else if (channelUID.getId().equals(SyrSafeTechBindingConstants.CHANNEL_PROFILE_AVAILABILITY)) {
+            int newPAStatus = -1;
+
+            if (command instanceof DecimalType) {
+                newPAStatus = ((DecimalType) command).intValue();
+            } else if (command instanceof OnOffType) {
+                newPAStatus = ((OnOffType) command) == OnOffType.ON ? 1 : 0;
+            } else {
+                logger.warn("Invalid command type for profileAvailability channel: {}",
+                        command.getClass().getSimpleName());
+                return;
+            }
+
+            int selectedProfile;
+            try {
+                selectedProfile = getCurrentSelectedProfile(ipAddress);
+            } catch (IOException e) {
+                logger.error("Exception in getCurrentSelectedProfile: {}", e.getMessage(), e);
+                return;
+            }
+
+            try {
+                setPAStatus(ipAddress, selectedProfile, newPAStatus);
+                if (((OnOffType) command) == OnOffType.OFF) {
+                    List<Integer> activeProfiles = getActiveProfiles(ipAddress);
+                    if (activeProfiles.size() > 1) {
+                        // Wähle ein anderes aktives Profil aus, das nicht das derzeit ausgewählte Profil ist
+                        for (Integer profile : activeProfiles) {
+                            if (profile != selectedProfile) {
+                                setSelectProfileStatus(ipAddress, profile);
+                                break;
+                            }
+                        }
+                    } else {
+                        logger.warn("Cannot deactivate profile as there is no other active profile available");
+                    }
+                }
+            } catch (IOException | TimeoutException | InterruptedException | ExecutionException e) {
+                logger.error("Exception in setPAStatus: {}", e.getMessage(), e);
+            }
         }
     }
 
@@ -145,12 +188,24 @@ public class SyrSafeTechHandler extends BaseThingHandler {
     // #endregion main Handler
 
     // #region multiusage functions
+
+    private int getCurrentSelectedProfile(String ipAddress) throws IOException {
+        try {
+            String response = sendCommand(ipAddress, "get", "PRF", "");
+            return parseSelectProfileResponse(response);
+        } catch (InterruptedException | TimeoutException | ExecutionException e) {
+            logger.error("Exception: {}", e.getMessage(), e);
+            return -1;
+        }
+    }
+
     // Update the updateData method to accept an ipAddress parameter and call updateShutoffStatus
     private void updateData(String ipAddress) throws InterruptedException, TimeoutException, ExecutionException {
         try {
             updateShutoffStatus(ipAddress);
             updateSelectProfileStatus(ipAddress);
             updateNumberOfProfilesStatus(ipAddress);
+            updatePAStatus(ipAddress);
             updateStatus(ThingStatus.ONLINE);
         } catch (IOException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
@@ -259,6 +314,7 @@ public class SyrSafeTechHandler extends BaseThingHandler {
 
     private void setSelectProfileStatus(String ipAddress, int newProfile)
             throws IOException, TimeoutException, InterruptedException, ExecutionException {
+        setPAStatus(ipAddress, newProfile, 1); // 1 = on
         String response = sendCommand(ipAddress, "set", "PRF", String.valueOf(newProfile));
         updateSelectProfileChannel(response);
     }
@@ -348,4 +404,77 @@ public class SyrSafeTechHandler extends BaseThingHandler {
     }
 
     // #endregion Number of Profiles
+
+    // #region Profile Access
+
+    // Add this method to handle getting PAx status
+    private int getPAStatus(String ipAddress, int profile) throws IOException {
+        try {
+            String response = sendCommand(ipAddress, "get", "PA" + profile, "");
+            String key = "getPA" + profile;
+            return parsePAResponse(response, key);
+        } catch (InterruptedException | TimeoutException | ExecutionException e) {
+            logger.error("Exception: {}", e.getMessage(), e);
+            return -1;
+        }
+    }
+
+    // Add this method to handle setting PAx status
+    private void setPAStatus(String ipAddress, int profile, int status) throws IOException {
+        try {
+            String response = sendCommand(ipAddress, "set", "PA" + profile, String.valueOf(status));
+            int newStatus = parsePAResponse(response, "set" + "PA" + profile + status);
+            if (newStatus != status) {
+                logger.warn("Failed to set PA{} status to {}: {}", profile, status, response);
+            }
+        } catch (InterruptedException | TimeoutException | ExecutionException e) {
+            logger.error("Exception: {}", e.getMessage(), e);
+        }
+    }
+
+    // Add this method to parse the response for PA commands
+    private int parsePAResponse(String response, String key) {
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            if (jsonObject.has(key)) {
+                return jsonObject.getInt(key);
+            } else {
+                return -1;
+            }
+        } catch (JSONException e) {
+            logger.warn("Unable to parse response as a JSON object: {}", response);
+            return -1;
+        }
+    }
+
+    private void updatePAStatus(String ipAddress)
+            throws IOException, InterruptedException, TimeoutException, ExecutionException {
+        int selectedProfile = getCurrentSelectedProfile(ipAddress);
+        String response = sendCommand(ipAddress, "get", "PA" + selectedProfile, "");
+        updatePAChannel(response, selectedProfile);
+    }
+
+    private void updatePAChannel(String response, int selectedProfile) {
+        int status = parsePAResponse(response, "getPA" + selectedProfile);
+        if (status == 1 || status == 0) {
+            updateState(SyrSafeTechBindingConstants.CHANNEL_PROFILE_AVAILABILITY,
+                    status == 1 ? OnOffType.ON : OnOffType.OFF);
+        } else {
+            logger.warn("Invalid profile availability status received: {}", response);
+        }
+    }
+
+    private List<Integer> getActiveProfiles(String ipAddress) throws IOException {
+        List<Integer> activeProfiles = new ArrayList<>();
+
+        for (int profile = 1; profile <= 8; profile++) {
+
+            if (getPAStatus(ipAddress, profile) == 1) {
+                activeProfiles.add(profile);
+            }
+        }
+        return activeProfiles;
+    }
+
+    // #endregion Profile Access
 }

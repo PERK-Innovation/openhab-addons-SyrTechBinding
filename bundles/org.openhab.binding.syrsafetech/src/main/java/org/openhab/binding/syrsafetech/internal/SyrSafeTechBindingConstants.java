@@ -34,4 +34,5 @@ public class SyrSafeTechBindingConstants {
     public static final String CHANNEL_SHUTOFF = "shutoff";
     public static final String CHANNEL_SELECT_PROFILE = "selectProfile";
     public static final String CHANNEL_NUMBER_OF_PROFILES = "numberOfProfiles";
+    public static final String CHANNEL_PROFILE_AVAILABILITY = "profileAvailability";
 }

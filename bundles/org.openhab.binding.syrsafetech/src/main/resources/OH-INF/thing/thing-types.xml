@@ -13,6 +13,7 @@
 			<channel id="shutoff" typeId="shutoff"/>
 			<channel id="selectProfile" typeId="selectProfile"/>
 			<channel id="numberOfProfiles" typeId="numberOfProfiles"/>
+			<channel id="profileAvailability" typeId="profileAvailability"/>
 		</channels>
 
 		<config-description>
@@ -47,5 +48,12 @@
 		<description>The number of available profiles for the user</description>
 		<state readOnly="true"/>
 	</channel-type>
+	<channel-type id="profileAvailability">
+		<item-type>Switch</item-type>
+		<label>Profile Availability</label>
+		<description>Shows the availability status of the selected profile</description>
+		<category>Switch</category>
+	</channel-type>
+
 
 </thing:thing-descriptions>
