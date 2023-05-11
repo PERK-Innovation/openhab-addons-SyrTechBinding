@@ -16,6 +16,7 @@ import static org.openhab.binding.syrsafetech.internal.SyrSafeTechBindingConstan
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +31,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
+import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
@@ -126,6 +128,7 @@ public class SyrSafeTechHandler extends BaseThingHandler {
             if (newProfile >= 1 && newProfile <= 8) {
                 try {
                     setSelectProfileStatus(ipAddress, newProfile);
+                    updateData(ipAddress);
                 } catch (IOException | TimeoutException | InterruptedException | ExecutionException e) {
                     logger.error("Exception in setSelectProfileStatus: {}", e.getMessage(), e);
                 }
@@ -172,6 +175,14 @@ public class SyrSafeTechHandler extends BaseThingHandler {
             } catch (IOException | TimeoutException | InterruptedException | ExecutionException e) {
                 logger.error("Exception in setPAStatus: {}", e.getMessage(), e);
             }
+        } else if (channelUID.getId().equals(SyrSafeTechBindingConstants.CHANNEL_PROFILE_NAME)) {
+            if (command instanceof StringType) {
+                try {
+                    setProfileNameStatus(ipAddress, command.toString());
+                } catch (Exception e) {
+                    logger.error("Failed to set profile name: {}", e.getMessage());
+                }
+            }
         }
     }
 
@@ -206,6 +217,7 @@ public class SyrSafeTechHandler extends BaseThingHandler {
             updateSelectProfileStatus(ipAddress);
             updateNumberOfProfilesStatus(ipAddress);
             updatePAStatus(ipAddress);
+            updateProfileNameStatus(ipAddress);
             updateStatus(ThingStatus.ONLINE);
         } catch (IOException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
@@ -477,4 +489,74 @@ public class SyrSafeTechHandler extends BaseThingHandler {
     }
 
     // #endregion Profile Access
+
+    // #region Profile Name
+
+    /**
+     * Retrieves the name of the currently selected profile and updates the channel accordingly.
+     *
+     * @param ipAddress The IP address of the device
+     * @throws IOException, TimeoutException, InterruptedException, ExecutionException
+     */
+    private void updateProfileNameStatus(String ipAddress)
+            throws IOException, TimeoutException, InterruptedException, ExecutionException {
+        int selectedProfile = getCurrentSelectedProfile(ipAddress);
+        String response = sendCommand(ipAddress, "get", "PN" + selectedProfile, "");
+        updateProfileNameChannel(response);
+    }
+
+    /**
+     * Sends the command to set the name of the currently selected profile and updates the channel accordingly.
+     *
+     * @param ipAddress The IP address of the device
+     * @param newName The new name for the profile
+     * @throws IOException, TimeoutException, InterruptedException, ExecutionException
+     */
+    private void setProfileNameStatus(String ipAddress, String newName)
+            throws IOException, TimeoutException, InterruptedException, ExecutionException {
+        int selectedProfile = getCurrentSelectedProfile(ipAddress);
+        String response = sendCommand(ipAddress, "set", "PN" + selectedProfile + "/" + newName, "");
+        updateProfileNameChannel(response);
+    }
+
+    /**
+     * Updates the profileName channel based on the response received from the device.
+     *
+     * @param response The response from the device
+     */
+    private void updateProfileNameChannel(String response) {
+        String profileName = parseProfileNameResponse(response);
+        if (profileName != null && !profileName.isEmpty()) {
+            updateState(SyrSafeTechBindingConstants.CHANNEL_PROFILE_NAME, new StringType(profileName));
+        } else {
+            logger.warn("Invalid profile name received: {}", response);
+        }
+    }
+
+    /**
+     * Parses the response received from the device and returns the profile name.
+     *
+     * @param response The response from the device
+     * @return The profile name or null if the response is invalid
+     */
+    private String parseProfileNameResponse(String response) {
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            Iterator<String> keys = jsonObject.keys();
+
+            while (keys.hasNext()) {
+                String key = keys.next();
+                if (key.startsWith("getPN")) {
+                    return jsonObject.getString(key);
+                } else if (key.startsWith("setPN") && jsonObject.getString(key).equals("OK")) {
+                    return key.split("/")[1];
+                }
+            }
+        } catch (JSONException e) {
+            logger.warn("Unable to parse response as a JSON object: {}", response);
+        }
+        return "";
+    }
+
+    // #endregion Profile Name
 }

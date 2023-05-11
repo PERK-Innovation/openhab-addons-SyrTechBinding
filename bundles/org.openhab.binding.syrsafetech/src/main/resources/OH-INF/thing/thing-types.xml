@@ -14,6 +14,7 @@
 			<channel id="selectProfile" typeId="selectProfile"/>
 			<channel id="numberOfProfiles" typeId="numberOfProfiles"/>
 			<channel id="profileAvailability" typeId="profileAvailability"/>
+			<channel id="profileName" typeId="profileName"/>
 		</channels>
 
 		<config-description>
@@ -54,6 +55,11 @@
 		<description>Shows the availability status of the selected profile</description>
 		<category>Switch</category>
 	</channel-type>
-
+	<channel-type id="profileName">
+		<item-type>String</item-type>
+		<label>Profile Name</label>
+		<description>The name of the current profile</description>
+		<state readOnly="false"/>
+	</channel-type>
 
 </thing:thing-descriptions>
