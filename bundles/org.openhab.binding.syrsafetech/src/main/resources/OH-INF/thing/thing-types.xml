@@ -22,6 +22,8 @@
 			<channel id="profileMicroleakage" typeId="profileMicroleakage"/>
 			<channel id="profileBuzzerOn" typeId="profileBuzzerOn"/>
 			<channel id="profileLeakageWarningOn" typeId="profileLeakageWarningOn"/>
+			<channel id="ongoingAlarm" typeId="ongoingAlarm"/>
+			<channel id="currentValveStatus" typeId="currentValveStatus"/>
 		</channels>
 
 		<config-description>
@@ -115,6 +117,21 @@
 		<item-type>Switch</item-type>
 		<label>Profile Leakage Warning On</label>
 		<description>Leakage warning status of the current profile</description>
+		<state readOnly="true"></state>
+	</channel-type>
+
+	<channel-type id="ongoingAlarm">
+		<item-type>String</item-type>
+		<label>Ongoing Alarm</label>
+		<description>Displays the ongoing alarm status</description>
+		<state readOnly="true"></state>
+	</channel-type>
+
+
+	<channel-type id="currentValveStatus">
+		<item-type>String</item-type>
+		<label>Current Valve Status</label>
+		<description>Displays the current status of the valve</description>
 		<state readOnly="true"></state>
 	</channel-type>
 

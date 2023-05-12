@@ -225,6 +225,8 @@ public class SyrSafeTechHandler extends BaseThingHandler {
             updateProfileMicroleakageChannel(ipAddress);
             updateProfileBuzzerOnChannel(ipAddress);
             updateProfileLeakageWarningOnChannel(ipAddress);
+            updateOngoingAlarmChannel(ipAddress);
+            updateCurrentValveStatusChannel(ipAddress);
             updateStatus(ThingStatus.ONLINE);
         } catch (IOException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
@@ -689,4 +691,94 @@ public class SyrSafeTechHandler extends BaseThingHandler {
     }
 
     // #endregion get channels
+
+    // #region Alarm
+
+    // Method to convert alarm code to its meaning
+    private String getAlarmMeaning(String alarmCode) {
+        switch (alarmCode) {
+            case "FF":
+                return "NO ALARM";
+            case "A1":
+                return "ALARM END SWITCH";
+            case "A2":
+                return "NO NETWORK";
+            case "A3":
+                return "ALARM VOLUME LEAKAGE";
+            case "A4":
+                return "ALARM TIME LEAKAGE";
+            case "A5":
+                return "ALARM MAX FLOW LEAKAGE";
+            case "A6":
+                return "ALARM MICRO LEAKAGE";
+            case "A7":
+                return "ALARM EXT. SENSOR LEAKAGE";
+            case "A8":
+                return "ALARM TURBINE BLOCKED";
+            case "A9":
+                return "ALARM PRESSURE SENSOR ERROR";
+            case "AA":
+                return "ALARM TEMPERATURE SENSOR ERROR";
+            case "AB":
+                return "ALARM CONDUCTIVITY SENSOR ERROR";
+            case "AC":
+                return "ALARM TO HIGH CONDUCTIVITY";
+            case "AD":
+                return "LOW BATTERY";
+            case "AE":
+                return "WARNING VOLUME LEAKAGE";
+            case "AF":
+                return "ALARM NO POWER SUPPLY";
+            default:
+                return "Unknown alarm code";
+        }
+    }
+
+    // Method to convert valve status code to its meaning
+    private String getValveStatusMeaning(String valveStatusCode) {
+        switch (valveStatusCode) {
+            case "10":
+                return "Closed";
+            case "11":
+                return "Closing";
+            case "20":
+                return "Open";
+            case "21":
+                return "Opening";
+            case "30":
+                return "Undefined";
+            default:
+                return "Unknown valve status code";
+        }
+    }
+
+    private void updateOngoingAlarmChannel(String ipAddress) throws IOException {
+        String response = null;
+        try {
+            response = sendCommand(ipAddress, "get", "ALA", "");
+        } catch (Exception e) {
+            logger.error("Error sending command: {}", e.getMessage());
+        }
+        if (response != null) {
+            String value = parseResponse(response, "getALA");
+            String alarmMeaning = getAlarmMeaning(value);
+            updateState(SyrSafeTechBindingConstants.CHANNEL_ONGOING_ALARM, new StringType(alarmMeaning));
+        }
+    }
+
+    private void updateCurrentValveStatusChannel(String ipAddress) throws IOException {
+        String response = null;
+        try {
+            response = sendCommand(ipAddress, "get", "VLV", "");
+        } catch (Exception e) {
+            logger.error("Error sending command: {}", e.getMessage());
+        }
+        if (response != null) {
+            String value = parseResponse(response, "getVLV");
+            String valveStatusMeaning = getValveStatusMeaning(value);
+            updateState(SyrSafeTechBindingConstants.CHANNEL_CURRENT_VALVE_STATUS, new StringType(valveStatusMeaning));
+        }
+    }
+
+    // #endregion Alarm
 }

@@ -43,4 +43,6 @@ public class SyrSafeTechBindingConstants {
     public static final String CHANNEL_PROFILE_MICROLEAKAGE = "profileMicroleakage";
     public static final String CHANNEL_PROFILE_BUZZER_ON = "profileBuzzerOn";
     public static final String CHANNEL_PROFILE_LEAKAGE_WARNING_ON = "profileLeakageWarningOn";
+    public static final String CHANNEL_ONGOING_ALARM = "ongoingAlarm";
+    public static final String CHANNEL_CURRENT_VALVE_STATUS = "currentValveStatus";
 }
