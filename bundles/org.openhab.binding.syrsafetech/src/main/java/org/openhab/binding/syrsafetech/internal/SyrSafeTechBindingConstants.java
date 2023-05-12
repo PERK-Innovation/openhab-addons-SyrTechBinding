@@ -36,4 +36,11 @@ public class SyrSafeTechBindingConstants {
     public static final String CHANNEL_NUMBER_OF_PROFILES = "numberOfProfiles";
     public static final String CHANNEL_PROFILE_AVAILABILITY = "profileAvailability";
     public static final String CHANNEL_PROFILE_NAME = "profileName";
+    public static final String CHANNEL_PROFILE_VOLUME_LEVEL = "profileVolumeLevel";
+    public static final String CHANNEL_PROFILE_TIME_LEVEL = "profileTimeLevel";
+    public static final String CHANNEL_PROFILE_MAX_FLOW = "profileMaxFlow";
+    public static final String CHANNEL_PROFILE_RETURN_TIME = "profileReturnTime";
+    public static final String CHANNEL_PROFILE_MICROLEAKAGE = "profileMicroleakage";
+    public static final String CHANNEL_PROFILE_BUZZER_ON = "profileBuzzerOn";
+    public static final String CHANNEL_PROFILE_LEAKAGE_WARNING_ON = "profileLeakageWarningOn";
 }

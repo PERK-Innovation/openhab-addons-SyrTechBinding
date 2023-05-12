@@ -15,6 +15,13 @@
 			<channel id="numberOfProfiles" typeId="numberOfProfiles"/>
 			<channel id="profileAvailability" typeId="profileAvailability"/>
 			<channel id="profileName" typeId="profileName"/>
+			<channel id="profileVolumeLevel" typeId="profileVolumeLevel"/>
+			<channel id="profileTimeLevel" typeId="profileTimeLevel"/>
+			<channel id="profileMaxFlow" typeId="profileMaxFlow"/>
+			<channel id="profileReturnTime" typeId="profileReturnTime"/>
+			<channel id="profileMicroleakage" typeId="profileMicroleakage"/>
+			<channel id="profileBuzzerOn" typeId="profileBuzzerOn"/>
+			<channel id="profileLeakageWarningOn" typeId="profileLeakageWarningOn"/>
 		</channels>
 
 		<config-description>
@@ -60,6 +67,55 @@
 		<label>Profile Name</label>
 		<description>The name of the current profile</description>
 		<state readOnly="false"/>
+	</channel-type>
+
+	<channel-type id="profileVolumeLevel">
+		<item-type>String</item-type>
+		<label>Profile Volume Level</label>
+		<description>Volume level of the current profile</description>
+		<state readOnly="true"></state>
+	</channel-type>
+
+	<channel-type id="profileTimeLevel">
+		<item-type>String</item-type>
+		<label>Profile Time Level</label>
+		<description>Time level of the current profile</description>
+		<state readOnly="true"></state>
+	</channel-type>
+
+	<channel-type id="profileMaxFlow">
+		<item-type>String</item-type>
+		<label>Profile Max Flow</label>
+		<description>Maximum flow of the current profile</description>
+		<state readOnly="true"></state>
+	</channel-type>
+
+	<channel-type id="profileReturnTime">
+		<item-type>String</item-type>
+		<label>Profile Return Time</label>
+		<description>Return time of the current profile</description>
+		<state readOnly="true"></state>
+	</channel-type>
+
+	<channel-type id="profileMicroleakage">
+		<item-type>Switch</item-type>
+		<label>Profile Microleakage</label>
+		<description>Microleakage status of the current profile</description>
+		<state readOnly="true"></state>
+	</channel-type>
+
+	<channel-type id="profileBuzzerOn">
+		<item-type>Switch</item-type>
+		<label>Profile Buzzer On</label>
+		<description>Buzzer status of the current profile</description>
+		<state readOnly="true"></state>
+	</channel-type>
+
+	<channel-type id="profileLeakageWarningOn">
+		<item-type>Switch</item-type>
+		<label>Profile Leakage Warning On</label>
+		<description>Leakage warning status of the current profile</description>
+		<state readOnly="true"></state>
 	</channel-type>
 
 </thing:thing-descriptions>

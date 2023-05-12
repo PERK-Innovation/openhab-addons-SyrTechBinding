@@ -218,6 +218,13 @@ public class SyrSafeTechHandler extends BaseThingHandler {
             updateNumberOfProfilesStatus(ipAddress);
             updatePAStatus(ipAddress);
             updateProfileNameStatus(ipAddress);
+            updateProfileVolumeLevelChannel(ipAddress);
+            updateProfileTimeLevelChannel(ipAddress);
+            updateProfileMaxFlowChannel(ipAddress);
+            updateProfileReturnTimeChannel(ipAddress);
+            updateProfileMicroleakageChannel(ipAddress);
+            updateProfileBuzzerOnChannel(ipAddress);
+            updateProfileLeakageWarningOnChannel(ipAddress);
             updateStatus(ThingStatus.ONLINE);
         } catch (IOException e) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, e.getMessage());
@@ -559,4 +566,127 @@ public class SyrSafeTechHandler extends BaseThingHandler {
     }
 
     // #endregion Profile Name
+
+    // #region get channels
+
+    private void updateProfileVolumeLevelChannel(String ipAddress) throws IOException {
+        Integer currentProfile = getCurrentSelectedProfile(ipAddress);
+        String response = null;
+        try {
+            response = sendCommand(ipAddress, "get", "PV" + currentProfile, "");
+        } catch (Exception e) {
+            logger.error("Error sending command: {}", e.getMessage());
+        }
+        if (response != null) {
+            updateChannel(response, "getPV" + currentProfile, SyrSafeTechBindingConstants.CHANNEL_PROFILE_VOLUME_LEVEL);
+        }
+    }
+
+    private void updateProfileTimeLevelChannel(String ipAddress) throws IOException {
+        Integer currentProfile = getCurrentSelectedProfile(ipAddress);
+        String response = null;
+        try {
+            response = sendCommand(ipAddress, "get", "PT" + currentProfile, "");
+        } catch (Exception e) {
+            logger.error("Error sending command: {}", e.getMessage());
+        }
+        if (response != null) {
+            updateChannel(response, "getPT" + currentProfile, SyrSafeTechBindingConstants.CHANNEL_PROFILE_TIME_LEVEL);
+        }
+    }
+
+    private void updateProfileMaxFlowChannel(String ipAddress) throws IOException {
+        Integer currentProfile = getCurrentSelectedProfile(ipAddress);
+        String response = null;
+        try {
+            response = sendCommand(ipAddress, "get", "PF" + currentProfile, "");
+        } catch (Exception e) {
+            logger.error("Error sending command: {}", e.getMessage());
+        }
+        if (response != null) {
+            updateChannel(response, "getPF" + currentProfile, SyrSafeTechBindingConstants.CHANNEL_PROFILE_MAX_FLOW);
+        }
+    }
+
+    private void updateProfileReturnTimeChannel(String ipAddress) throws IOException {
+        Integer currentProfile = getCurrentSelectedProfile(ipAddress);
+        String response = null;
+        try {
+            response = sendCommand(ipAddress, "get", "PR" + currentProfile, "");
+        } catch (Exception e) {
+            logger.error("Error sending command: {}", e.getMessage());
+        }
+        if (response != null) {
+            updateChannel(response, "getPR" + currentProfile, SyrSafeTechBindingConstants.CHANNEL_PROFILE_RETURN_TIME);
+        }
+    }
+
+    private void updateProfileMicroleakageChannel(String ipAddress) throws IOException {
+        Integer currentProfile = getCurrentSelectedProfile(ipAddress);
+        String response = null;
+        try {
+            response = sendCommand(ipAddress, "get", "PM" + currentProfile, "");
+        } catch (Exception e) {
+            logger.error("Error sending command: {}", e.getMessage());
+        }
+        if (response != null) {
+            updateChannel(response, "getPM" + currentProfile, SyrSafeTechBindingConstants.CHANNEL_PROFILE_MICROLEAKAGE);
+        }
+    }
+
+    private void updateProfileBuzzerOnChannel(String ipAddress) throws IOException {
+        Integer currentProfile = getCurrentSelectedProfile(ipAddress);
+        String response = null;
+        try {
+            response = sendCommand(ipAddress, "get", "PB" + currentProfile, "");
+        } catch (Exception e) {
+            logger.error("Error sending command: {}", e.getMessage());
+        }
+        if (response != null) {
+            updateChannel(response, "getPB" + currentProfile, SyrSafeTechBindingConstants.CHANNEL_PROFILE_BUZZER_ON);
+        }
+    }
+
+    private void updateProfileLeakageWarningOnChannel(String ipAddress) throws IOException {
+        Integer currentProfile = getCurrentSelectedProfile(ipAddress);
+        String response = null;
+        try {
+            response = sendCommand(ipAddress, "get", "PW" + currentProfile, "");
+        } catch (Exception e) {
+            logger.error("Error sending command: {}", e.getMessage());
+        }
+        if (response != null) {
+            updateChannel(response, "getPW" + currentProfile,
+                    SyrSafeTechBindingConstants.CHANNEL_PROFILE_LEAKAGE_WARNING_ON);
+        }
+    }
+
+    private void updateChannel(String response, String key, String channel) {
+        String value = parseResponse(response, key);
+        if (value != null) {
+            if (channel.equals(SyrSafeTechBindingConstants.CHANNEL_PROFILE_MICROLEAKAGE)
+                    || channel.equals(SyrSafeTechBindingConstants.CHANNEL_PROFILE_BUZZER_ON)
+                    || channel.equals(SyrSafeTechBindingConstants.CHANNEL_PROFILE_LEAKAGE_WARNING_ON)) {
+                updateState(channel, value.equals("1") ? OnOffType.ON : OnOffType.OFF);
+            } else {
+                updateState(channel, new StringType(value));
+            }
+        } else {
+            logger.warn("Invalid response received: {}", response);
+        }
+    }
+
+    private String parseResponse(String response, String key) {
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            if (jsonObject.has(key)) {
+                return jsonObject.getString(key);
+            }
+        } catch (JSONException e) {
+            logger.warn("Unable to parse response as a JSON object: {}", response);
+        }
+        return "";
+    }
+
+    // #endregion get channels
 }
